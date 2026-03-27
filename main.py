@@ -236,10 +236,9 @@ async def analyse_wine(req: AnalyseRequest):
     return wine_data
 
 
-async def _post_to_sheets(action: str, row: list) -> dict:
-    """POST a row to the Google Apps Script webhook."""
+async def _post_to_sheets(payload: dict) -> dict:
+    """POST a named-field payload to the Google Apps Script webhook."""
     url = apps_script_url()
-    payload = {"action": action, "row": row}
     try:
         async with httpx.AsyncClient(timeout=20.0) as http:
             resp = await http.post(
@@ -273,19 +272,20 @@ async def add_wine(req: AddWineRequest):
     notes_combined = "\n".join(
         filter(None, [req.notes, f"Food: {req.food}" if req.food else ""])
     )
-    row = [
-        req.name,
-        req.vintage,
-        req.region,
-        req.grape,
-        req.winery,
-        req.rating,
-        f"${req.price_aud}" if req.price_aud else "",
-        req.quantity,
-        req.date_added or today,
-        notes_combined,
-    ]
-    result = await _post_to_sheets("addCellar", row)
+    payload = {
+        "action": "add_wine",
+        "name": req.name,
+        "vintage": req.vintage,
+        "region": req.region,
+        "grape": req.grape,
+        "winery": req.winery,
+        "rating": req.rating,
+        "price": f"${req.price_aud}" if req.price_aud else "",
+        "quantity": req.quantity,
+        "date_added": req.date_added or today,
+        "notes": notes_combined,
+    }
+    result = await _post_to_sheets(payload)
     return {"status": "ok", "message": "Wine added to cellar", "sheets": result}
 
 
@@ -293,20 +293,21 @@ async def add_wine(req: AddWineRequest):
 async def mark_tasted(req: MarkTastedRequest):
     """Forward a tasting log to the Drunk tab in Google Sheets."""
     today = date.today().isoformat()
-    row = [
-        req.name,
-        req.vintage,
-        req.region,
-        req.grape,
-        req.winery,
-        req.rating,
-        f"${req.price_aud}" if req.price_aud else "",
-        req.quantity,
-        req.date_added or today,
-        req.notes,
-        req.date_drunk or today,
-        req.my_score,
-        req.my_notes,
-    ]
-    result = await _post_to_sheets("addDrunk", row)
+    payload = {
+        "action": "add_drunk",
+        "name": req.name,
+        "vintage": req.vintage,
+        "region": req.region,
+        "grape": req.grape,
+        "winery": req.winery,
+        "rating": req.rating,
+        "price": f"${req.price_aud}" if req.price_aud else "",
+        "quantity": req.quantity,
+        "date_added": req.date_added or today,
+        "notes": req.notes,
+        "date_drunk": req.date_drunk or today,
+        "my_score": req.my_score,
+        "my_notes": req.my_notes,
+    }
+    result = await _post_to_sheets(payload)
     return {"status": "ok", "message": "Tasting logged", "sheets": result}
