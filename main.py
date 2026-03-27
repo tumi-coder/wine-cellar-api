@@ -242,7 +242,12 @@ async def _post_to_sheets(action: str, row: list) -> dict:
     payload = {"action": action, "row": row}
     try:
         async with httpx.AsyncClient(timeout=20.0) as http:
-            resp = await http.post(url, json=payload)
+            resp = await http.post(
+                url,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                follow_redirects=True,
+            )
             resp.raise_for_status()
             result = resp.json()
     except httpx.TimeoutException:
