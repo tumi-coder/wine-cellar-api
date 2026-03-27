@@ -285,7 +285,7 @@ async def add_wine(req: AddWineRequest):
         req.date_added or today,
         notes_combined,
     ]
-    result = await _post_to_sheets("addCellar", row)
+    result = await _post_to_sheets("add_wine", row)
     return {"status": "ok", "message": "Wine added to cellar", "sheets": result}
 
 
@@ -308,5 +308,5 @@ async def mark_tasted(req: MarkTastedRequest):
         req.my_score,
         req.my_notes,
     ]
-    result = await _post_to_sheets("addDrunk", row)
+    result = await _post_to_sheets("add_drunk", row)
     return {"status": "ok", "message": "Tasting logged", "sheets": result}
