@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#7B2D3B">
+<title>🍷 Wine Cellar</title>
+<style>
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ─── Tokens ─── */
+:root {
+  --wine:      #7B2D3B;
+  --wine-d:    #5C1F2B;
+  --wine-l:    #A84055;
+  --gold:      #C8962E;
+  --amber-bg:  #FFFBEB;
+  --amber-bd:  #FCD34D;
+  --amber-tx:  #92400E;
+  --ok-bg:     #F0FDF4;
+  --ok-bd:     #86EFAC;
+  --ok-tx:     #166534;
+  --err-bg:    #FEF2F2;
+  --err-bd:    #FCA5A5;
+  --err-tx:    #991B1B;
+  --text:      #111827;
+  --muted:     #6B7280;
+  --border:    #E5E7EB;
+  --bg:        #F9FAFB;
+  --white:     #FFFFFF;
+  --radius:    12px;
+  --shadow:    0 2px 10px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.16);
+}
+
+/* ─── Base ─── */
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  max-width: 560px;
+  margin: 0 auto;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* ─── Setup Screen ─── */
+#setup {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  background: var(--white); padding: 52px 24px 44px;
+}
+#setup.hidden { display: none; }
+.setup-logo  { font-size: 72px; margin-bottom: 20px; }
+.setup-title { font-size: 30px; font-weight: 800; color: var(--wine); margin-bottom: 8px; text-align: center; letter-spacing: -0.5px; }
+.setup-sub   { font-size: 15px; color: var(--muted); text-align: center; margin-bottom: 36px; line-height: 1.6; }
+.setup-card  { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 14px; }
+.setup-card h3 { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+.setup-card p  { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+.setup-card a  { color: var(--wine); font-weight: 600; text-decoration: none; }
+.setup-input { width: 100%; padding: 13px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 15px; font-family: inherit; color: var(--text); background: var(--white); -webkit-appearance: none; }
+.setup-input:focus { outline: none; border-color: var(--wine); }
+.setup-callout { width: 100%; background: #FDF6F7; border: 1.5px solid #DEB8BE; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; }
+.setup-callout h3 { color: var(--wine); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
+.setup-callout p  { color: var(--wine); font-size: 13px; line-height: 1.6; opacity: 0.85; }
+
+/* ─── App Shell ─── */
+#app { display: none; flex-direction: column; min-height: 100vh; }
+#app.visible { display: flex; }
+
+/* ─── Header ─── */
+.app-header {
+  background: var(--wine); color: white;
+  padding: 14px 16px 12px;
+  display: flex; align-items: center; gap: 10px;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 2px 12px rgba(91,31,43,0.35);
+}
+.header-logo  { font-size: 22px; flex-shrink: 0; }
+.header-title { font-size: 20px; font-weight: 800; flex: 1; letter-spacing: -0.3px; }
+.header-badge { background: rgba(255,255,255,0.22); border-radius: 999px; padding: 3px 11px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.refresh-btn  { background: rgba(255,255,255,0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.refresh-btn:active { background: rgba(255,255,255,0.35); }
+.refresh-btn.spinning { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Tab Bar ─── */
+.tab-bar {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 560px;
+  background: var(--white); border-top: 1px solid var(--border);
+  display: flex; z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.07);
+}
+.tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 9px 4px 7px; background: none; border: none; cursor: pointer; color: var(--muted); font-size: 10px; font-weight: 600; gap: 3px; min-height: 58px; transition: color 0.15s; letter-spacing: 0.2px; }
+.tab-btn .tab-icon { font-size: 22px; line-height: 1; }
+.tab-btn.active { color: var(--wine); }
+
+/* ─── Content ─── */
+.content-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.tab-pane { display: none; padding: 14px 14px calc(76px + env(safe-area-inset-bottom, 0px)); }
+.tab-pane.active { display: block; }
+
+/* ═══════════════════════════════
+   ADD WINE TAB
+═══════════════════════════════ */
+
+/* Upload Zone */
+.upload-zone {
+  background: linear-gradient(145deg, #FDF6F7 0%, #FAF0F1 100%);
+  border: 2.5px dashed var(--wine-l); border-radius: 20px;
+  padding: 36px 20px; text-align: center; margin-bottom: 18px;
+  cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.upload-zone:active { transform: scale(0.985); background: #F5E8EA; }
+#file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; font-size: 0; }
+.upload-icon  { font-size: 50px; margin-bottom: 12px; display: block; }
+.upload-zone h2 { font-size: 19px; font-weight: 800; color: var(--wine); margin-bottom: 6px; }
+.upload-zone p  { font-size: 14px; color: var(--muted); }
+.upload-cta { display: inline-flex; align-items: center; gap: 6px; background: var(--wine); color: white; border-radius: 999px; padding: 9px 22px; font-size: 15px; font-weight: 700; margin-top: 16px; }
+
+/* Preview */
+.preview-wrap { position: relative; margin-bottom: 14px; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); display: none; }
+.preview-wrap img { width: 100%; max-height: 260px; object-fit: cover; display: block; }
+.preview-change { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.62); color: white; border: none; border-radius: 999px; padding: 6px 15px; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+/* Status bar */
+.status-bar { display: none; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 13px 15px; margin-bottom: 14px; align-items: center; gap: 11px; font-size: 14px; font-weight: 500; }
+.status-bar.visible { display: flex; }
+.status-bar.loading { border-color: var(--wine);  background: #FDF6F7; color: var(--wine); }
+.status-bar.success { border-color: var(--ok-bd); background: var(--ok-bg); color: var(--ok-tx); }
+.status-bar.error   { border-color: var(--err-bd);background: var(--err-bg);color: var(--err-tx); }
+.spinner { width: 20px; height: 20px; border: 2.5px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.65s linear infinite; flex-shrink: 0; }
+
+/* Amber legend */
+.amber-legend { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--amber-tx); background: var(--amber-bg); border: 1px solid var(--amber-bd); border-radius: 8px; padding: 10px 13px; margin-bottom: 16px; }
+.amber-dot { width: 8px; height: 8px; background: #F59E0B; border-radius: 50%; flex-shrink: 0; }
+
+/* Form */
+.section-label { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; margin: 20px 0 11px; display: flex; align-items: center; gap: 8px; }
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+.form-group { margin-bottom: 13px; }
+.form-group label { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.amber-indicator { width: 7px; height: 7px; background: #F59E0B; border-radius: 50%; display: none; flex-shrink: 0; }
+.form-group.amber .amber-indicator { display: inline-block; }
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%; padding: 12px 13px; border: 1.5px solid var(--border); border-radius: 10px;
+  font-size: 16px; color: var(--text); background: var(--white);
+  -webkit-appearance: none; font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--wine); box-shadow: 0 0 0 3px rgba(123,45,59,0.1); }
+.form-group textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+.form-group.amber input, .form-group.amber textarea { border-color: var(--amber-bd); background: var(--amber-bg); }
+.form-group.amber label { color: var(--amber-tx); }
+.window-pair { display: flex; align-items: center; gap: 8px; }
+.window-pair input { flex: 1; }
+.window-sep { color: var(--muted); font-size: 14px; font-weight: 600; flex-shrink: 0; }
+
+/* Quantity stepper */
+.qty-stepper { display: flex; align-items: center; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; }
+.qty-btn { width: 46px; min-height: 46px; background: var(--bg); border: none; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--wine); font-weight: 700; flex-shrink: 0; }
+.qty-btn:active { background: #F0E8EA; }
+.qty-val { flex: 1; text-align: center; font-size: 18px; font-weight: 700; padding: 10px 4px; background: var(--white); border-left: 1.5px solid var(--border); border-right: 1.5px solid var(--border); }
+
+/* ─── Buttons ─── */
+.btn { display: block; width: 100%; padding: 15px; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 700; cursor: pointer; text-align: center; font-family: inherit; transition: transform 0.1s, opacity 0.15s; }
+.btn:active  { transform: scale(0.978); }
+.btn + .btn  { margin-top: 10px; }
+.btn-wine    { background: var(--wine);   color: white; }
+.btn-wine:hover { background: var(--wine-d); }
+.btn-ghost   { background: var(--bg);     color: var(--text); border: 1.5px solid var(--border); }
+.btn-success { background: #16A34A; color: white; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ═══════════════════════════════
+   CELLAR & TASTED TABS
+═══════════════════════════════ */
+
+.search-wrap { position: relative; margin-bottom: 13px; }
+.search-wrap input { width: 100%; padding: 12px 14px 12px 40px; border: 1.5px solid var(--border); border-radius: 12px; font-size: 16px; font-family: inherit; background: var(--white); color: var(--text); -webkit-appearance: none; }
+.search-wrap input:focus { outline: none; border-color: var(--wine); }
+.search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 17px; pointer-events: none; }
+
+.list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
+.list-header h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
+.count-pill { background: var(--wine); color: white; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 700; }
+
+/* Wine Cards */
+.wine-card { background: var(--white); border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 10px; border: 1px solid var(--border); overflow: hidden; }
+.card-main { display: flex; align-items: center; padding: 13px 12px 11px; cursor: pointer; gap: 11px; user-select: none; }
+.card-main:active { background: #fafafa; }
+.card-icon { width: 50px; height: 50px; flex-shrink: 0; background: linear-gradient(135deg, #F3E8E9, #EDD5D8); border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.card-body { flex: 1; min-width: 0; }
+.card-name   { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.2px; }
+.card-winery { font-size: 12px; color: var(--wine); font-weight: 600; margin-bottom: 6px; }
+.card-tags   { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.tag         { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; font-size: 11px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.tag-wine    { background: #FDF6F7; border-color: #DEB8BE; color: var(--wine); }
+.tag-score   { background: #FFFBEB; border-color: #FCD34D; color: #92400E; font-weight: 700; }
+.card-actions { display: flex; gap: 7px; }
+.card-chevron { font-size: 22px; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; font-weight: 300; align-self: flex-start; margin-top: 4px; }
+
+/* Expandable Detail */
+.card-detail { display: none; border-top: 1px solid var(--border); padding: 13px 13px 15px; background: var(--bg); }
+.card-detail.open { display: block; }
+.detail-row { display: flex; gap: 11px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; line-height: 1.5; }
+.detail-row:last-child { border-bottom: none; }
+.detail-row.notes { flex-direction: column; gap: 3px; }
+.detail-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; min-width: 88px; flex-shrink: 0; padding-top: 1px; }
+.detail-val  { color: var(--text); flex: 1; }
+.detail-val.italic { font-style: italic; color: var(--muted); }
+
+/* Empty & Error */
+.empty-state { text-align: center; padding: 60px 24px; }
+.empty-icon  { font-size: 56px; margin-bottom: 14px; }
+.empty-state h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.empty-state p  { font-size: 14px; color: var(--muted); line-height: 1.6; }
+.error-card { background: var(--white); border: 1.5px solid var(--err-bd); border-radius: 16px; padding: 24px; text-align: center; margin: 8px 0; color: var(--err-tx); }
+.last-updated { text-align: center; font-size: 12px; color: var(--muted); padding: 8px 0 0; }
+
+/* ═══════════════════════════════
+   SETTINGS TAB
+═══════════════════════════════ */
+.settings-block { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 14px; overflow: hidden; }
+.settings-block-title { padding: 11px 16px; font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--border); background: var(--bg); }
+.settings-row { padding: 16px; border-bottom: 1px solid var(--border); }
+.settings-row:last-child { border-bottom: none; }
+.settings-row label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.settings-row input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 15px; color: var(--text); background: var(--white); font-family: inherit; -webkit-appearance: none; }
+.settings-row input:focus { outline: none; border-color: var(--wine); }
+.settings-row p   { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+.settings-row a   { color: var(--wine); font-weight: 600; text-decoration: none; }
+.settings-row .mono { font-family: 'SF Mono', Menlo, monospace; font-size: 12px; word-break: break-all; }
+.how-to-steps { margin: 8px 0 0; padding: 0; list-style: none; }
+.how-to-steps li { display: flex; gap: 10px; font-size: 13px; color: var(--muted); line-height: 1.5; padding: 4px 0; }
+.step-num { width: 20px; height: 20px; background: var(--wine); color: white; border-radius: 50%; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+
+/* ═══════════════════════════════
+   TASTED MODAL
+═══════════════════════════════ */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.52); z-index: 200; align-items: flex-end; justify-content: center; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.modal-overlay.visible { display: flex; }
+.modal { background: var(--white); border-radius: 24px 24px 0 0; padding: 20px 20px calc(24px + env(safe-area-inset-bottom, 0px)); width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.28s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes slideUp { from { transform: translateY(110%); } to { transform: translateY(0); } }
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 18px; }
+.modal-title  { font-size: 21px; font-weight: 800; margin-bottom: 2px; letter-spacing: -0.3px; }
+.modal-sub    { font-size: 14px; color: var(--wine); font-weight: 600; margin-bottom: 18px; }
+
+/* Score slider */
+.score-display { font-size: 52px; font-weight: 800; color: var(--wine); text-align: center; margin: 8px 0 2px; line-height: 1; }
+.score-label   { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 14px; height: 18px; }
+input[type="range"] { width: 100%; -webkit-appearance: none; height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--wine) 0%, var(--wine) var(--pct, 90%), var(--border) var(--pct, 90%), var(--border) 100%); outline: none; margin: 8px 0 6px; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--wine); box-shadow: 0 2px 8px rgba(123,45,59,0.4); cursor: pointer; }
+.score-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); padding: 0 2px; margin-bottom: 6px; }
+
+/* ─── Loading Overlay ─── */
+#loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.88); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 14px; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+#loading-overlay.visible { display: flex; }
+.loader-text { font-size: 14px; font-weight: 600; color: var(--wine); }
+
+/* ─── Toast ─── */
+.toast { position: fixed; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(10px); background: #111827; color: white; padding: 11px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; z-index: 300; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; box-shadow: var(--shadow-lg); max-width: calc(100vw - 32px); text-align: center; }
+.toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════
+     SETUP SCREEN
+══════════════════════════════ -->
+<div id="setup">
+  <div class="setup-logo">🍷</div>
+  <h1 class="setup-title">Wine Cellar</h1>
+  <p class="setup-sub">Connect your Google Sheet to get started.<br>You only need to do this once on this device.</p>
+
+  <div class="setup-card">
+    <h3>Google Sheets API Key</h3>
+    <p>A read-only key used to display your cellar. The app adds wines via a secure backend server.</p>
+    <input class="setup-input" type="text" id="setup-key" placeholder="AIzaSy…" autocomplete="off" autocorrect="off" spellcheck="false">
+    <p style="font-size:12px;color:var(--muted);margin:8px 0 0;font-style:italic;">
+      Get from <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a> → Create Credentials → API key. Enable the Sheets API.
+    </p>
+  </div>
+
+  <div class="setup-card">
+    <h3>Sheet ID</h3>
+    <p>Pre-filled with your cellar sheet. Edit if needed.</p>
+    <input class="setup-input" type="text" id="setup-sid" value="1f0JCnu7qPU5GUJ_wUTPIlGs74e9jVMhb_h_yfF51X-8" autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+
+  <div class="setup-callout">
+    <h3>⚠️ Required sharing setting</h3>
+    <p>In Google Sheets → Share → Change to <strong>Anyone with the link → Viewer</strong>. Without this the API key returns a 403 error.</p>
+  </div>
+
+  <button class="btn btn-wine" style="width:100%;margin-top:4px;" onclick="completeSetup()">Open My Cellar →</button>
+</div>
+
+
+<!-- ══════════════════════════════
+     MAIN APP
+══════════════════════════════ -->
+<div id="app">
+
+  <header class="app-header">
+    <span class="header-logo">🍷</span>
+    <h1 class="header-title">Wine Cellar</h1>
+    <span class="header-badge" id="header-badge">—</span>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadData()">↻</button>
+  </header>
+
+  <div class="content-wrap">
+
+    <!-- ── ADD WINE TAB ── -->
+    <div class="tab-pane active" id="pane-add">
+
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" accept="image/*" capture="environment">
+        <span class="upload-icon">📷</span>
+        <h2>Photograph a Label</h2>
+        <p>Camera or photo library — Claude will do the rest</p>
+        <div class="upload-cta">📸 Take / Choose Photo</div>
+      </div>
+
+      <div class="preview-wrap" id="preview-wrap">
+        <img id="preview-img" src="" alt="Label preview">
+        <button class="preview-change" onclick="resetAddForm()">Change</button>
+      </div>
+
+      <div class="status-bar" id="status-bar">
+        <div class="spinner" id="status-spinner"></div>
+        <span class="status-icon" id="status-icon" style="display:none"></span>
+        <span id="status-text"></span>
+      </div>
+
+      <div id="add-form" style="display:none;">
+        <div class="amber-legend">
+          <span class="amber-dot"></span>
+          <span>Amber fields couldn't be auto-filled with confidence — please review them.</span>
+        </div>
+
+        <div class="section-label">Wine Identity</div>
+        <div class="form-group" id="fg-name"><label><span class="amber-indicator"></span>Wine Name</label><input type="text" id="f-name" placeholder="e.g. Penfolds Grange" autocorrect="off"></div>
+        <div class="form-group" id="fg-winery"><label><span class="amber-indicator"></span>Winery / Producer</label><input type="text" id="f-winery" placeholder="e.g. Penfolds" autocorrect="off"></div>
+        <div class="form-row">
+          <div class="form-group" id="fg-vintage"><label><span class="amber-indicator"></span>Vintage</label><input type="number" id="f-vintage" placeholder="2019" min="1900" max="2099" inputmode="numeric"></div>
+          <div class="form-group">
+            <label>Quantity</label>
+            <div class="qty-stepper">
+              <button class="qty-btn" onclick="adjustQty(-1)">−</button>
+              <div class="qty-val" id="qty-display">1</div>
+              <button class="qty-btn" onclick="adjustQty(1)">+</button>
+            </div>
+            <input type="hidden" id="f-quantity" value="1">
+          </div>
+        </div>
+        <div class="form-group" id="fg-region"><label><span class="amber-indicator"></span>Region</label><input type="text" id="f-region" placeholder="e.g. Barossa Valley, SA" autocorrect="off"></div>
+        <div class="form-group" id="fg-grape"><label><span class="amber-indicator"></span>Grape Variety</label><input type="text" id="f-grape" placeholder="e.g. Shiraz" autocorrect="off"></div>
+
+        <div class="section-label">Scores &amp; Value</div>
+        <div class="form-row">
+          <div class="form-group" id="fg-rating"><label><span class="amber-indicator"></span>Critic Rating</label><input type="text" id="f-rating" placeholder="97pts Halliday" autocorrect="off"></div>
+          <div class="form-group" id="fg-price"><label><span class="amber-indicator"></span>Price (AUD $)</label><input type="number" id="f-price" placeholder="0" step="1" inputmode="decimal"></div>
+        </div>
+
+        <div class="section-label">Drinking</div>
+        <div class="form-group" id="fg-window">
+          <label><span class="amber-indicator"></span>Drink Window</label>
+          <div class="window-pair">
+            <input type="number" id="f-drink-from" placeholder="2024" min="2000" max="2099" inputmode="numeric">
+            <span class="window-sep">–</span>
+            <input type="number" id="f-drink-to" placeholder="2040" min="2000" max="2099" inputmode="numeric">
+          </div>
+        </div>
+
+        <div class="section-label">Notes</div>
+        <div class="form-group" id="fg-notes"><label><span class="amber-indicator"></span>Tasting Notes</label><textarea id="f-notes" placeholder="Aromas, palate, finish…"></textarea></div>
+        <div class="form-group" id="fg-food"><label><span class="amber-indicator"></span>Food Pairings</label><input type="text" id="f-food" placeholder="e.g. Lamb, Beef, Hard cheese" autocorrect="off"></div>
+
+        <button class="btn btn-wine" id="save-wine-btn" onclick="saveWine()">🍾 Save to Cellar</button>
+        <button class="btn btn-ghost" onclick="resetAddForm()">Start Over</button>
+      </div>
+    </div>
+
+    <!-- ── CELLAR TAB ── -->
+    <div class="tab-pane" id="pane-cellar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="search-input" placeholder="Search name, winery, region, grape…" autocorrect="off" spellcheck="false" oninput="filterCellar(this.value)">
+      </div>
+      <div class="list-header">
+        <h2>My Cellar</h2>
+        <span class="count-pill" id="cellar-count">—</span>
+      </div>
+      <div id="cellar-list"></div>
+      <div class="last-updated" id="last-updated"></div>
+    </div>
+
+    <!-- ── TASTED TAB ── -->
+    <div class="tab-pane" id="pane-tasted">
+      <div class="list-header">
+        <h2>Tasted</h2>
+        <span class="count-pill" id="tasted-count">—</span>
+      </div>
+      <div id="tasted-list"></div>
+    </div>
+
+    <!-- ── SETTINGS TAB ── -->
+    <div class="tab-pane" id="pane-settings">
+      <div id="settings-content"></div>
+    </div>
+
+  </div><!-- /content-wrap -->
+
+  <!-- Tab Bar -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" id="tab-add" onclick="switchTab('add')">
+      <span class="tab-icon">📷</span><span>Add Wine</span>
+    </button>
+    <button class="tab-btn" id="tab-cellar" onclick="switchTab('cellar')">
+      <span class="tab-icon">🍾</span><span>Cellar</span>
+    </button>
+    <button class="tab-btn" id="tab-tasted" onclick="switchTab('tasted')">
+      <span class="tab-icon">✓</span><span>Tasted</span>
+    </button>
+    <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')">
+      <span class="tab-icon">⚙️</span><span>Settings</span>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+
+<!-- ══════════════════════════════
+     TASTED MODAL
+══════════════════════════════ -->
+<div class="modal-overlay" id="tasted-modal" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title">Log Tasting</h2>
+    <div class="modal-sub" id="modal-wine-label"></div>
+
+    <div class="form-group">
+      <label style="text-transform:uppercase;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;">My Score (1–10)</label>
+      <div class="score-display" id="score-display">9</div>
+      <div class="score-label" id="score-label">Exceptional</div>
+      <input type="range" id="score-range" min="1" max="10" value="9" oninput="updateScore(this.value)" style="--pct:88.9%;">
+      <div class="score-ticks"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span></div>
+    </div>
+
+    <div class="form-group" style="margin-top:14px;">
+      <label style="text-transform:uppercase;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;">My Tasting Notes</label>
+      <textarea id="modal-notes" placeholder="What did you taste? How did it drink? Would you buy again?" style="min-height:90px;"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label style="text-transform:uppercase;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;">Date Drunk</label>
+      <input type="date" id="modal-date">
+    </div>
+
+    <button class="btn btn-wine" id="modal-save-btn" onclick="submitTasted()" style="margin-top:4px;">✓ Mark as Tasted</button>
+    <button class="btn btn-ghost" onclick="closeModal()" style="margin-top:10px;">Cancel</button>
+  </div>
+</div>
+
+
+<!-- ── Loading overlay ── -->
+<div id="loading-overlay">
+  <div class="spinner" style="width:36px;height:36px;border-width:3px;border-color:#DEB8BE;border-top-color:var(--wine);"></div>
+  <div class="loader-text">Loading your cellar…</div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast"></div>
+
+
+<!-- ══════════════════════════════
+     JAVASCRIPT
+══════════════════════════════ -->
+<script>
+'use strict';
+
+/* ─── Config ────────────────────────────────────────────────────────────── */
+const BACKEND_URL      = 'https://web-production-a7936.up.railway.app';
+const DEFAULT_SHEET_ID = '1f0JCnu7qPU5GUJ_wUTPIlGs74e9jVMhb_h_yfF51X-8';
+
+// Column indices — Cellar tab
+const CC = { name:0, vintage:1, region:2, grape:3, winery:4, rating:5, price:6, qty:7, dateAdded:8, notes:9 };
+// Column indices — Drunk tab
+const CD = { name:0, vintage:1, region:2, grape:3, winery:4, rating:5, price:6, qty:7, dateAdded:8, notes:9, dateDrunk:10, myScore:11, myNotes:12 };
+
+/* ─── State ─────────────────────────────────────────────────────────────── */
+let allCellar         = [];
+let allTasted         = [];
+let renderedCellar    = [];   // current sorted/filtered slice — for modal lookups
+let filterText        = '';
+let lastUpdated       = null;
+let currentTastedWine = null; // wine object for the open tasted modal
+
+/* ─── Init ──────────────────────────────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('sheetsApiKey')) {
+    showApp();
+    loadData();
+  }
+  document.getElementById('modal-date').value = today();
+});
+
+/* ─── Setup ─────────────────────────────────────────────────────────────── */
+function completeSetup() {
+  const key = document.getElementById('setup-key').value.trim();
+  const sid = document.getElementById('setup-sid').value.trim();
+  if (!key) { showToast('Please enter your API key'); return; }
+  localStorage.setItem('sheetsApiKey', key);
+  localStorage.setItem('sheetId', sid || DEFAULT_SHEET_ID);
+  showApp();
+  loadData();
+}
+
+function showApp() {
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+}
+
+/* ─── Tab Switching ─────────────────────────────────────────────────────── */
+function switchTab(name) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pane-'  + name).classList.add('active');
+  document.getElementById('tab-'   + name).classList.add('active');
+  if (name === 'settings') renderSettings();
+}
+
+/* ─── Google Sheets: Load Data ──────────────────────────────────────────── */
+async function loadData() {
+  const apiKey  = localStorage.getItem('sheetsApiKey');
+  const sheetId = localStorage.getItem('sheetId') || DEFAULT_SHEET_ID;
+
+  setLoading(true);
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+
+  try {
+    const base = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values`;
+    const key  = encodeURIComponent(apiKey);
+    const [r1, r2] = await Promise.all([
+      fetch(`${base}/Cellar?key=${key}`),
+      fetch(`${base}/Drunk?key=${key}`)
+    ]);
+
+    if (!r1.ok) {
+      const e = await r1.json().catch(() => ({}));
+      if (r1.status === 403) throw new Error('Access denied (403). Set the sheet to "Anyone with link → Viewer" in Share settings.');
+      if (r1.status === 400) throw new Error('Invalid API key (400). Check Settings.');
+      if (r1.status === 404) throw new Error('Sheet not found (404). Check the Sheet ID in Settings.');
+      throw new Error((e.error?.message || 'Error ' + r1.status));
+    }
+
+    const d1 = await r1.json();
+    const d2 = r2.ok ? await r2.json() : { values: [] };
+
+    allCellar = parseRows(d1.values || [], CC);
+    allTasted = parseRows(d2.values || [], CD);
+    lastUpdated = new Date();
+
+    renderCellar();
+    renderTasted();
+    updateBadge();
+    showToast(`✓ ${allCellar.length} bottle${allCellar.length !== 1 ? 's' : ''} in cellar`);
+
+  } catch (e) {
+    renderError(e.message);
+    showToast('⚠️ ' + e.message.slice(0, 72));
+  }
+
+  setLoading(false);
+  btn.classList.remove('spinning');
+}
+
+function parseRows(values, cols) {
+  if (!values || values.length < 2) return [];
+  return values.slice(1)
+    .filter(r => r && (r[cols.name] || '').trim())
+    .map(r => {
+      const g = i => (r[i] || '').trim();
+      return {
+        name:      g(cols.name),      vintage:   g(cols.vintage),
+        region:    g(cols.region),    grape:     g(cols.grape),
+        winery:    g(cols.winery),    rating:    g(cols.rating),
+        price:     g(cols.price),     qty:       g(cols.qty),
+        dateAdded: g(cols.dateAdded), notes:     g(cols.notes),
+        dateDrunk: cols.dateDrunk !== undefined ? g(cols.dateDrunk) : '',
+        myScore:   cols.myScore   !== undefined ? g(cols.myScore)   : '',
+        myNotes:   cols.myNotes   !== undefined ? g(cols.myNotes)   : '',
+      };
+    });
+}
+
+/* ─── Cellar Rendering ──────────────────────────────────────────────────── */
+function filterCellar(text) {
+  filterText = (text || '').toLowerCase().trim();
+  renderCellar();
+}
+
+function renderCellar() {
+  const list = document.getElementById('cellar-list');
+  let wines = allCellar;
+  if (filterText) {
+    wines = wines.filter(w =>
+      [w.name, w.winery, w.vintage, w.region, w.grape].join(' ').toLowerCase().includes(filterText)
+    );
+  }
+  wines = [...wines].sort((a, b) =>
+    (parseInt(b.vintage) || 0) - (parseInt(a.vintage) || 0) || a.name.localeCompare(b.name)
+  );
+  renderedCellar = wines; // keep reference for modal lookups
+  document.getElementById('cellar-count').textContent = wines.length;
+
+  if (!wines.length) {
+    list.innerHTML = filterText
+      ? `<div class="empty-state"><div class="empty-icon">🔍</div><h3>No matches</h3><p>Try a different search term</p></div>`
+      : `<div class="empty-state"><div class="empty-icon">🍾</div><h3>Cellar is empty</h3><p>Tap <strong>Add Wine</strong> and photograph a label to add your first bottle.</p></div>`;
+  } else {
+    list.innerHTML = wines.map((w, i) => wineCardHTML(w, i)).join('');
+  }
+
+  const lu = document.getElementById('last-updated');
+  lu.textContent = lastUpdated ? 'Updated ' + lastUpdated.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+}
+
+function wineCardHTML(w, i) {
+  const id = `cellar-${i}`;
+  let detailRows = '';
+  if (w.rating)    detailRows += detailRow('Critic Rating', esc(w.rating));
+  if (w.price)     detailRows += detailRow('Price (AUD)',   esc(w.price));
+  if (w.dateAdded) detailRows += detailRow('Date Added',    esc(w.dateAdded));
+  if (w.qty)       detailRows += detailRow('Quantity',      esc(w.qty));
+  if (w.notes)     detailRows += detailRowNotes('Notes',    esc(w.notes));
+  const hasDetail = !!detailRows;
+
+  return `
+  <div class="wine-card">
+    <div class="card-main" onclick="toggleCard('${id}')">
+      <div class="card-icon">🍷</div>
+      <div class="card-body">
+        <div class="card-name">${esc(w.name)}</div>
+        ${w.winery ? `<div class="card-winery">${esc(w.winery)}</div>` : ''}
+        <div class="card-tags">
+          ${w.vintage ? `<span class="tag tag-wine">${esc(w.vintage)}</span>` : ''}
+          ${w.grape   ? `<span class="tag">${esc(trunc(w.grape,22))}</span>` : ''}
+          ${w.region  ? `<span class="tag">${esc(trunc(w.region,22))}</span>` : ''}
+          ${w.qty && w.qty !== '1' ? `<span class="tag">×${esc(w.qty)}</span>` : ''}
+          ${w.price   ? `<span class="tag">${esc(w.price)}</span>` : ''}
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-wine" style="padding:7px 14px;font-size:13px;width:auto;border-radius:8px;"
+                  onclick="event.stopPropagation();openTastedModal(${i})">🍷 Tasted</button>
+        </div>
+      </div>
+      ${hasDetail ? `<div class="card-chevron" id="chev-${id}">›</div>` : ''}
+    </div>
+    ${hasDetail ? `<div class="card-detail" id="detail-${id}">${detailRows}</div>` : ''}
+  </div>`;
+}
+
+/* ─── Tasted Rendering ──────────────────────────────────────────────────── */
+function renderTasted() {
+  const list  = document.getElementById('tasted-list');
+  const wines = [...allTasted].sort((a, b) => (b.dateDrunk || '').localeCompare(a.dateDrunk || ''));
+  document.getElementById('tasted-count').textContent = wines.length;
+
+  if (!wines.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div><h3>Nothing logged yet</h3><p>Tap <strong>Tasted</strong> on a wine in your Cellar to log a tasting.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = wines.map((w, i) => {
+    const id = `tasted-${i}`;
+    let detailRows = '';
+    if (w.dateDrunk) detailRows += detailRow('Date Drunk',  esc(w.dateDrunk));
+    if (w.rating)    detailRows += detailRow('Critic Score', esc(w.rating));
+    if (w.myNotes)   detailRows += detailRowNotes('My Notes', `<span class="italic">"${esc(w.myNotes)}"</span>`);
+    if (w.notes)     detailRows += detailRowNotes('Pro Notes', esc(w.notes));
+    const hasDetail = !!detailRows;
+
+    return `
+    <div class="wine-card">
+      <div class="card-main" onclick="toggleCard('${id}')">
+        <div class="card-icon">🍷</div>
+        <div class="card-body">
+          <div class="card-name">${esc(w.name)}</div>
+          ${w.winery ? `<div class="card-winery">${esc(w.winery)}</div>` : ''}
+          <div class="card-tags">
+            ${w.vintage    ? `<span class="tag tag-wine">${esc(w.vintage)}</span>` : ''}
+            ${w.grape      ? `<span class="tag">${esc(trunc(w.grape,22))}</span>` : ''}
+            ${w.dateDrunk  ? `<span class="tag">🗓 ${esc(w.dateDrunk)}</span>` : ''}
+            ${w.myScore    ? `<span class="tag tag-score">★ ${esc(w.myScore)}/10</span>` : ''}
+          </div>
+        </div>
+        ${hasDetail ? `<div class="card-chevron" id="chev-${id}">›</div>` : ''}
+      </div>
+      ${hasDetail ? `<div class="card-detail" id="detail-${id}">${detailRows}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function detailRow(label, valHtml) {
+  return `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-val">${valHtml}</span></div>`;
+}
+function detailRowNotes(label, valHtml) {
+  return `<div class="detail-row notes"><span class="detail-label">${label}</span><span class="detail-val">${valHtml}</span></div>`;
+}
+function toggleCard(id) {
+  const detail = document.getElementById('detail-' + id);
+  const chev   = document.getElementById('chev-'   + id);
+  if (!detail) return;
+  const open = detail.classList.toggle('open');
+  if (chev) chev.textContent = open ? '⌄' : '›';
+}
+
+/* ─── Add Wine: Photo Upload ────────────────────────────────────────────── */
+document.getElementById('file-input').addEventListener('change', async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+
+  const mediaType = file.type || 'image/jpeg';
+  const reader    = new FileReader();
+
+  reader.onload = async function(ev) {
+    const dataUrl = ev.target.result;
+    const base64  = dataUrl.split(',')[1];
+
+    // Show preview
+    document.getElementById('preview-img').src     = dataUrl;
+    document.getElementById('upload-zone').style.display  = 'none';
+    document.getElementById('preview-wrap').style.display = 'block';
+    document.getElementById('add-form').style.display     = 'none';
+
+    // Immediately analyse
+    await analyseLabel(base64, mediaType);
+  };
+  reader.readAsDataURL(file);
+});
+
+async function analyseLabel(base64, mediaType) {
+  showStatus('loading', null, 'Analysing label — searching for ratings, price, tasting notes…');
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/analyse-wine`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, media_type: mediaType })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `Server error ${resp.status}`);
+    }
+
+    const wine = await resp.json();
+    populateAddForm(wine);
+    showStatus('success', '✓', 'Label analysed — review highlighted fields, then save.');
+    document.getElementById('add-form').style.display = 'block';
+
+  } catch (err) {
+    showStatus('error', '⚠️', 'Analysis failed: ' + err.message + '. Fill in manually below.');
+    populateAddForm({});
+    document.getElementById('add-form').style.display = 'block';
+  }
+}
+
+function showStatus(type, icon, text) {
+  const bar     = document.getElementById('status-bar');
+  const spinner = document.getElementById('status-spinner');
+  const iconEl  = document.getElementById('status-icon');
+  const textEl  = document.getElementById('status-text');
+
+  bar.className = 'status-bar visible ' + type;
+  textEl.textContent = text;
+
+  if (type === 'loading') {
+    spinner.style.display = 'block';
+    iconEl.style.display  = 'none';
+  } else {
+    spinner.style.display = 'none';
+    iconEl.style.display  = icon ? 'inline' : 'none';
+    iconEl.textContent    = icon || '';
+  }
+}
+
+/* ─── Add Wine: Populate Form ───────────────────────────────────────────── */
+function populateAddForm(wine) {
+  const conf = wine.confidence || {};
+
+  function setField(inputId, groupId, value, confKey) {
+    const el    = document.getElementById(inputId);
+    const group = document.getElementById(groupId);
+    if (!el || !group) return;
+    el.value = (value !== null && value !== undefined) ? String(value) : '';
+    const isAmber = !value || conf[confKey] === 'low';
+    group.classList.toggle('amber', isAmber);
+  }
+
+  setField('f-name',       'fg-name',    wine.name,       'name');
+  setField('f-winery',     'fg-winery',  wine.winery,     'winery');
+  setField('f-vintage',    'fg-vintage', wine.vintage,    'vintage');
+  setField('f-region',     'fg-region',  wine.region,     'region');
+  setField('f-grape',      'fg-grape',   wine.grape,      'grape');
+  setField('f-rating',     'fg-rating',  wine.rating,     'rating');
+  setField('f-price',      'fg-price',   wine.price_aud,  'price_aud');
+  setField('f-notes',      'fg-notes',   wine.notes,      'notes');
+  setField('f-drink-from', 'fg-window',  wine.drink_from, 'drink_from');
+  setField('f-drink-to',   'fg-window',  wine.drink_to,   'drink_to');
+  setField('f-food',       'fg-food',    wine.food,       'food');
+
+  setQty(1);
+}
+
+/* ─── Add Wine: Quantity Stepper ────────────────────────────────────────── */
+function setQty(n) {
+  n = Math.max(1, Math.min(999, n));
+  document.getElementById('f-quantity').value   = n;
+  document.getElementById('qty-display').textContent = n;
+}
+function adjustQty(delta) {
+  setQty((parseInt(document.getElementById('f-quantity').value) || 1) + delta);
+}
+
+/* ─── Add Wine: Save ────────────────────────────────────────────────────── */
+async function saveWine() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showToast('⚠️ Wine name is required'); return; }
+
+  const btn = document.getElementById('save-wine-btn');
+  btn.disabled    = true;
+  btn.textContent = 'Saving…';
+
+  const payload = {
+    name,
+    winery:     document.getElementById('f-winery').value.trim(),
+    vintage:    document.getElementById('f-vintage').value.trim(),
+    region:     document.getElementById('f-region').value.trim(),
+    grape:      document.getElementById('f-grape').value.trim(),
+    rating:     document.getElementById('f-rating').value.trim(),
+    price_aud:  document.getElementById('f-price').value.trim(),
+    quantity:   parseInt(document.getElementById('f-quantity').value) || 1,
+    notes:      document.getElementById('f-notes').value.trim(),
+    food:       document.getElementById('f-food').value.trim(),
+    drink_from: document.getElementById('f-drink-from').value.trim(),
+    drink_to:   document.getElementById('f-drink-to').value.trim(),
+    date_added: today(),
+  };
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/add-wine`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `Server error ${resp.status}`);
+    }
+
+    showStatus('success', '🍾', `${name} saved! Tap Cellar and refresh to see it.`);
+    showToast('🍾 Wine saved to cellar!');
+    resetAddForm();
+    // Reload cellar data in background
+    loadData();
+
+  } catch (err) {
+    showToast('⚠️ Save failed: ' + err.message);
+    showStatus('error', '⚠️', 'Save failed: ' + err.message);
+  }
+
+  btn.disabled    = false;
+  btn.textContent = '🍾 Save to Cellar';
+}
+
+/* ─── Add Wine: Reset ───────────────────────────────────────────────────── */
+function resetAddForm() {
+  document.getElementById('file-input').value  = '';
+  document.getElementById('preview-wrap').style.display = 'none';
+  document.getElementById('upload-zone').style.display  = 'block';
+  document.getElementById('status-bar').className       = 'status-bar';
+  document.getElementById('add-form').style.display     = 'none';
+
+  ['f-name','f-winery','f-vintage','f-region','f-grape',
+   'f-rating','f-price','f-notes','f-food','f-drink-from','f-drink-to']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.querySelectorAll('.form-group.amber').forEach(el => el.classList.remove('amber'));
+  setQty(1);
+}
+
+/* ─── Tasted Modal ──────────────────────────────────────────────────────── */
+function openTastedModal(cellarIndex) {
+  const wine = renderedCellar[cellarIndex];
+  if (!wine) return;
+  currentTastedWine = wine;
+
+  document.getElementById('modal-wine-label').textContent =
+    wine.name + (wine.vintage ? ' · ' + wine.vintage : '');
+  document.getElementById('modal-notes').value = '';
+  document.getElementById('modal-date').value  = today();
+  const range = document.getElementById('score-range');
+  range.value = 9;
+  updateScore(9);
+
+  document.getElementById('tasted-modal').classList.add('visible');
+}
+
+function closeModal() {
+  document.getElementById('tasted-modal').classList.remove('visible');
+  currentTastedWine = null;
+}
+
+function handleOverlayClick(e) {
+  if (e.target === e.currentTarget) closeModal();
+}
+
+const scoreLabels = {
+  1:'Faulty', 2:'Poor', 3:'Below Average', 4:'Mediocre',
+  5:'Average', 6:'Above Average', 7:'Good', 8:'Very Good',
+  9:'Exceptional', 10:'Extraordinary'
+};
+
+function updateScore(val) {
+  val = parseInt(val);
+  const pct = ((val - 1) / 9) * 100;
+  document.getElementById('score-range').style.setProperty('--pct', pct + '%');
+  document.getElementById('score-display').textContent = val;
+  document.getElementById('score-label').textContent   = scoreLabels[val] || '';
+}
+
+async function submitTasted() {
+  if (!currentTastedWine) return;
+  const w = currentTastedWine;
+
+  const btn = document.getElementById('modal-save-btn');
+  btn.disabled    = true;
+  btn.textContent = 'Saving…';
+
+  const payload = {
+    // Original wine data
+    name:      w.name,
+    winery:    w.winery    || '',
+    vintage:   w.vintage   || '',
+    region:    w.region    || '',
+    grape:     w.grape     || '',
+    rating:    w.rating    || '',
+    price_aud: (w.price || '').replace(/[^0-9.]/g, ''),
+    quantity:  parseInt(w.qty) || 1,
+    notes:     w.notes     || '',
+    date_added:w.dateAdded || '',
+    // Tasting log
+    my_score:  document.getElementById('score-range').value,
+    my_notes:  document.getElementById('modal-notes').value.trim(),
+    date_drunk:document.getElementById('modal-date').value || today(),
+  };
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/mark-tasted`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `Server error ${resp.status}`);
+    }
+
+    closeModal();
+    showToast('🍷 Tasting logged!');
+    loadData(); // refresh both tabs
+
+  } catch (err) {
+    showToast('⚠️ Failed: ' + err.message);
+  }
+
+  btn.disabled    = false;
+  btn.textContent = '✓ Mark as Tasted';
+}
+
+/* ─── Settings ──────────────────────────────────────────────────────────── */
+function renderSettings() {
+  const sid = esc(localStorage.getItem('sheetId') || DEFAULT_SHEET_ID);
+  const key = localStorage.getItem('sheetsApiKey') || '';
+
+  document.getElementById('settings-content').innerHTML = `
+    <div class="settings-block">
+      <div class="settings-block-title">Backend Server</div>
+      <div class="settings-row">
+        <label>API URL</label>
+        <p class="mono">${BACKEND_URL}</p>
+        <p>Handles label analysis (Claude vision + web search) and Google Sheets writes.</p>
+      </div>
+    </div>
+
+    <div class="settings-block">
+      <div class="settings-block-title">Google Sheets (read display)</div>
+      <div class="settings-row">
+        <label>API Key</label>
+        <input type="password" id="s-key" value="${esc(key)}" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="AIzaSy…">
+        <p>Read-only key. Get from <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a>.</p>
+      </div>
+      <div class="settings-row">
+        <label>Sheet ID</label>
+        <input type="text" id="s-sid" value="${sid}" autocomplete="off" autocorrect="off" spellcheck="false">
+        <p>The ID from your Google Sheets URL. Sheet must be set to <strong>Anyone with link → Viewer</strong>.</p>
+      </div>
+    </div>
+
+    <div class="settings-block">
+      <div class="settings-block-title">Sheet Structure</div>
+      <div class="settings-row">
+        <label>Cellar tab</label>
+        <p class="mono">Name · Vintage · Region · Grape · Winery · Critic Rating · Price AUD · Quantity · Date Added · Notes</p>
+      </div>
+      <div class="settings-row">
+        <label>Drunk tab</label>
+        <p class="mono">…same 10… · Date Drunk · My Score · My Tasting Notes</p>
+      </div>
+    </div>
+
+    <button class="btn btn-wine" onclick="saveSettings()">Save &amp; Refresh</button>
+  `;
+}
+
+function saveSettings() {
+  const key = document.getElementById('s-key')?.value.trim();
+  const sid = document.getElementById('s-sid')?.value.trim();
+  if (key) localStorage.setItem('sheetsApiKey', key);
+  if (sid) localStorage.setItem('sheetId', sid);
+  showToast('✅ Settings saved');
+  switchTab('cellar');
+  loadData();
+}
+
+/* ─── Error Rendering ───────────────────────────────────────────────────── */
+function renderError(msg) {
+  document.getElementById('cellar-list').innerHTML = `
+    <div class="error-card">
+      <div style="font-size:36px;margin-bottom:12px;">⚠️</div>
+      <strong style="font-size:16px;">Couldn't load cellar</strong>
+      <p style="margin-top:10px;font-size:13px;line-height:1.6;">${esc(msg)}</p>
+      <button class="btn btn-wine" onclick="loadData()" style="margin-top:18px;">Try Again</button>
+      <button class="btn btn-ghost" onclick="switchTab('settings')" style="margin-top:10px;">Settings</button>
+    </div>`;
+  document.getElementById('cellar-count').textContent = '!';
+}
+
+/* ─── Helpers ───────────────────────────────────────────────────────────── */
+function updateBadge() {
+  const n = allCellar.length;
+  document.getElementById('header-badge').textContent = n + ' bottle' + (n !== 1 ? 's' : '');
+}
+
+function setLoading(on) {
+  document.getElementById('loading-overlay').classList.toggle('visible', on);
+}
+
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function trunc(s, max) {
+  if (!s || s.length <= max) return s || '';
+  return s.slice(0, max) + '…';
+}
+
+let _tt;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('visible');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => el.classList.remove('visible'), 3200);
+}
+</script>
+</body>
+</html>
