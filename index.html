@@ -178,8 +178,14 @@ body {
 .btn-wine    { background: var(--wine);   color: white; }
 .btn-wine:hover { background: var(--wine-d); }
 .btn-ghost   { background: var(--bg);     color: var(--text); border: 1.5px solid var(--border); }
+.btn-outline { background: transparent; color: var(--wine); border: 2px solid var(--wine); }
+.btn-outline:hover { background: #FDF6F7; }
 .btn-success { background: #16A34A; color: white; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Inline tasting section */
+.tasting-section { margin-top: 18px; padding: 18px 16px 16px; background: #FDF6F7; border: 1.5px solid #DEB8BE; border-radius: var(--radius); }
+.tasting-section .section-label { margin-top: 0; }
 
 /* ═══════════════════════════════
    CELLAR & TASTED TABS
@@ -386,8 +392,33 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 28p
         <div class="form-group" id="fg-notes"><label><span class="amber-indicator"></span>Tasting Notes</label><textarea id="f-notes" placeholder="Aromas, palate, finish…"></textarea></div>
         <div class="form-group" id="fg-food"><label><span class="amber-indicator"></span>Food Pairings</label><input type="text" id="f-food" placeholder="e.g. Lamb, Beef, Hard cheese" autocorrect="off"></div>
 
-        <button class="btn btn-wine" id="save-wine-btn" onclick="saveWine()">🍾 Save to Cellar</button>
-        <button class="btn btn-ghost" onclick="resetAddForm()">Start Over</button>
+        <div style="display:flex;gap:10px;margin-top:4px;">
+          <button class="btn btn-wine" id="save-wine-btn" onclick="saveWine()" style="flex:1;">🍾 Add to Cellar</button>
+          <button class="btn btn-outline" id="log-tasting-btn" onclick="showTastingSection()" style="flex:1;">🍷 Log a Tasting</button>
+        </div>
+
+        <div id="tasting-section" class="tasting-section" style="display:none;">
+          <div class="section-label">Your Tasting</div>
+          <div class="form-group">
+            <label style="text-transform:uppercase;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;">My Score (1–10)</label>
+            <div class="score-display" id="inline-score-display">—</div>
+            <div class="score-label" id="inline-score-label" style="height:18px;"></div>
+            <input type="range" id="inline-score-range" min="1" max="10" value="5" oninput="updateInlineScore(this.value)" style="--pct:0%;opacity:0.35;">
+            <div class="score-ticks"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span></div>
+          </div>
+          <div class="form-group">
+            <label style="text-transform:uppercase;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;">My Tasting Notes</label>
+            <textarea id="inline-my-notes" placeholder="What did you taste? How did it drink?"></textarea>
+          </div>
+          <div class="form-group">
+            <label style="text-transform:uppercase;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;">Occasion <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted);">(optional)</span></label>
+            <input type="text" id="inline-occasion" placeholder="e.g. dinner at friends" autocorrect="off">
+          </div>
+          <button class="btn btn-wine" id="log-tasting-save-btn" onclick="saveTasting()">🍷 Log Tasting</button>
+          <button class="btn btn-ghost" onclick="hideTastingSection()" style="margin-top:10px;">Cancel</button>
+        </div>
+
+        <button class="btn btn-ghost" onclick="resetAddForm()" style="margin-top:10px;">Start Over</button>
       </div>
     </div>
 
@@ -405,10 +436,10 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 28p
       <div class="last-updated" id="last-updated"></div>
     </div>
 
-    <!-- ── TASTED TAB ── -->
+    <!-- ── DRUNK TAB ── -->
     <div class="tab-pane" id="pane-tasted">
       <div class="list-header">
-        <h2>Tasted</h2>
+        <h2>Drunk wines</h2>
         <span class="count-pill" id="tasted-count">—</span>
       </div>
       <div id="tasted-list"></div>
@@ -430,7 +461,7 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 28p
       <span class="tab-icon">🍾</span><span>Cellar</span>
     </button>
     <button class="tab-btn" id="tab-tasted" onclick="switchTab('tasted')">
-      <span class="tab-icon">✓</span><span>Tasted</span>
+      <span class="tab-icon">✓</span><span>Drunk</span>
     </button>
     <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')">
       <span class="tab-icon">⚙️</span><span>Settings</span>
@@ -451,9 +482,9 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 28p
 
     <div class="form-group">
       <label style="text-transform:uppercase;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;">My Score (1–10)</label>
-      <div class="score-display" id="score-display">9</div>
-      <div class="score-label" id="score-label">Exceptional</div>
-      <input type="range" id="score-range" min="1" max="10" value="9" oninput="updateScore(this.value)" style="--pct:88.9%;">
+      <div class="score-display" id="score-display">—</div>
+      <div class="score-label" id="score-label" style="height:18px;"></div>
+      <input type="range" id="score-range" min="1" max="10" value="5" oninput="updateScore(this.value)" style="--pct:0%;opacity:0.35;">
       <div class="score-ticks"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span></div>
     </div>
 
@@ -884,7 +915,7 @@ async function saveWine() {
   }
 
   btn.disabled    = false;
-  btn.textContent = '🍾 Save to Cellar';
+  btn.textContent = '🍾 Add to Cellar';
 }
 
 /* ─── Add Wine: Reset ───────────────────────────────────────────────────── */
@@ -900,9 +931,103 @@ function resetAddForm() {
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.querySelectorAll('.form-group.amber').forEach(el => el.classList.remove('amber'));
   setQty(1);
+  hideTastingSection();
 }
 
-/* ─── Tasted Modal ──────────────────────────────────────────────────────── */
+/* ─── Log a Tasting (inline, from Add tab) ──────────────────────────────── */
+let inlineScoreSelected = false;
+
+function showTastingSection() {
+  document.getElementById('save-wine-btn').style.display   = 'none';
+  document.getElementById('log-tasting-btn').style.display = 'none';
+  document.getElementById('tasting-section').style.display = 'block';
+  inlineScoreSelected = false;
+  const r = document.getElementById('inline-score-range');
+  r.value = 5;
+  r.style.setProperty('--pct', '0%');
+  r.style.opacity = '0.35';
+  document.getElementById('inline-score-display').textContent = '—';
+  document.getElementById('inline-score-label').textContent   = '';
+  document.getElementById('inline-my-notes').value  = '';
+  document.getElementById('inline-occasion').value  = '';
+}
+
+function hideTastingSection() {
+  document.getElementById('tasting-section').style.display  = 'none';
+  document.getElementById('save-wine-btn').style.display    = '';
+  document.getElementById('log-tasting-btn').style.display  = '';
+}
+
+const scoreLabels = {
+  1:'Faulty', 2:'Poor', 3:'Below Average', 4:'Mediocre',
+  5:'Average', 6:'Above Average', 7:'Good', 8:'Very Good',
+  9:'Exceptional', 10:'Extraordinary'
+};
+
+function updateInlineScore(val) {
+  inlineScoreSelected = true;
+  val = parseInt(val);
+  const pct = ((val - 1) / 9) * 100;
+  const r = document.getElementById('inline-score-range');
+  r.style.setProperty('--pct', pct + '%');
+  r.style.opacity = '1';
+  document.getElementById('inline-score-display').textContent = val;
+  document.getElementById('inline-score-label').textContent   = scoreLabels[val] || '';
+}
+
+async function saveTasting() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showToast('⚠️ Wine name is required'); return; }
+  if (!inlineScoreSelected) { showToast('⚠️ Please add a score'); return; }
+
+  const btn = document.getElementById('log-tasting-save-btn');
+  btn.disabled    = true;
+  btn.textContent = 'Saving…';
+
+  const myNotes  = document.getElementById('inline-my-notes').value.trim();
+  const occasion = document.getElementById('inline-occasion').value.trim();
+  const combinedNotes = [myNotes, occasion ? `Occasion: ${occasion}` : ''].filter(Boolean).join('\n');
+
+  const payload = {
+    name,
+    winery:     document.getElementById('f-winery').value.trim(),
+    vintage:    document.getElementById('f-vintage').value.trim(),
+    region:     document.getElementById('f-region').value.trim(),
+    grape:      document.getElementById('f-grape').value.trim(),
+    rating:     document.getElementById('f-rating').value.trim(),
+    price_aud:  document.getElementById('f-price').value.trim(),
+    quantity:   parseInt(document.getElementById('f-quantity').value) || 1,
+    notes:      document.getElementById('f-notes').value.trim(),
+    date_added: today(),
+    my_score:   document.getElementById('inline-score-range').value,
+    my_notes:   combinedNotes,
+    date_drunk: today(),
+  };
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/mark-tasted`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `Server error ${resp.status}`);
+    }
+    showToast('🍷 Tasting logged!');
+    resetAddForm();
+    loadData();
+  } catch (err) {
+    showToast('⚠️ Save failed: ' + err.message);
+  }
+
+  btn.disabled    = false;
+  btn.textContent = '🍷 Log Tasting';
+}
+
+/* ─── Tasted Modal (from Cellar tab) ───────────────────────────────────── */
+let modalScoreSelected = false;
+
 function openTastedModal(cellarIndex) {
   const wine = renderedCellar[cellarIndex];
   if (!wine) return;
@@ -912,9 +1037,14 @@ function openTastedModal(cellarIndex) {
     wine.name + (wine.vintage ? ' · ' + wine.vintage : '');
   document.getElementById('modal-notes').value = '';
   document.getElementById('modal-date').value  = today();
+
+  modalScoreSelected = false;
   const range = document.getElementById('score-range');
-  range.value = 9;
-  updateScore(9);
+  range.value = 5;
+  range.style.setProperty('--pct', '0%');
+  range.style.opacity = '0.35';
+  document.getElementById('score-display').textContent = '—';
+  document.getElementById('score-label').textContent   = '';
 
   document.getElementById('tasted-modal').classList.add('visible');
 }
@@ -928,22 +1058,20 @@ function handleOverlayClick(e) {
   if (e.target === e.currentTarget) closeModal();
 }
 
-const scoreLabels = {
-  1:'Faulty', 2:'Poor', 3:'Below Average', 4:'Mediocre',
-  5:'Average', 6:'Above Average', 7:'Good', 8:'Very Good',
-  9:'Exceptional', 10:'Extraordinary'
-};
-
 function updateScore(val) {
+  modalScoreSelected = true;
   val = parseInt(val);
   const pct = ((val - 1) / 9) * 100;
-  document.getElementById('score-range').style.setProperty('--pct', pct + '%');
+  const r = document.getElementById('score-range');
+  r.style.setProperty('--pct', pct + '%');
+  r.style.opacity = '1';
   document.getElementById('score-display').textContent = val;
   document.getElementById('score-label').textContent   = scoreLabels[val] || '';
 }
 
 async function submitTasted() {
   if (!currentTastedWine) return;
+  if (!modalScoreSelected) { showToast('⚠️ Please add a score'); return; }
   const w = currentTastedWine;
 
   const btn = document.getElementById('modal-save-btn');
