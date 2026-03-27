@@ -1,10 +1,11 @@
 """
 Wine Cellar API
 ───────────────
-POST /analyse-wine  — Vision + web search via Claude; returns structured wine JSON
-POST /add-wine      — Forwards wine data to Google Apps Script (Cellar tab)
-POST /mark-tasted   — Forwards tasting log to Google Apps Script (Drunk tab)
-GET  /health        — Liveness probe for Railway
+POST /analyse-wine      — Vision + web search via Claude; returns structured wine JSON
+POST /add-wine          — Forwards wine data to Google Apps Script (Cellar tab)
+POST /mark-tasted       — Forwards tasting log to Google Apps Script (Drunk tab)
+POST /update-quantity   — Decrements qty in Cellar; deletes row if qty reaches 0
+GET  /health            — Liveness probe for Railway
 """
 
 import os
@@ -118,6 +119,13 @@ class AddWineRequest(BaseModel):
     drink_from: str = ""
     drink_to: str = ""
     date_added: str = ""
+
+
+class UpdateQuantityRequest(BaseModel):
+    name: str
+    vintage: str = ""
+    winery: str = ""
+    quantity_change: int = -1
 
 
 class MarkTastedRequest(BaseModel):
@@ -311,3 +319,20 @@ async def mark_tasted(req: MarkTastedRequest):
     }
     result = await _post_to_sheets(payload)
     return {"status": "ok", "message": "Tasting logged", "sheets": result}
+
+
+@app.post("/update-quantity")
+async def update_quantity(req: UpdateQuantityRequest):
+    """
+    Decrement (or adjust) the quantity of a wine in the Cellar sheet.
+    If the new quantity reaches 0 the Apps Script deletes the row entirely.
+    """
+    payload = {
+        "action": "update_quantity",
+        "name": req.name,
+        "vintage": req.vintage,
+        "winery": req.winery,
+        "quantity_change": req.quantity_change,
+    }
+    result = await _post_to_sheets(payload)
+    return {"status": "ok", "message": "Quantity updated", "sheets": result}

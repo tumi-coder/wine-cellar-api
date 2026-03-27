@@ -694,7 +694,7 @@ function wineCardHTML(w, i) {
         </div>
         <div class="card-actions">
           <button class="btn btn-wine" style="padding:7px 14px;font-size:13px;width:auto;border-radius:8px;"
-                  onclick="event.stopPropagation();openTastedModal(${i})">🍷 Tasted</button>
+                  onclick="event.stopPropagation();openTastedModal(${i})">🍷 Log Tasting</button>
         </div>
       </div>
       ${hasDetail ? `<div class="card-chevron" id="chev-${id}">›</div>` : ''}
@@ -1106,6 +1106,18 @@ async function submitTasted() {
       const err = await resp.json().catch(() => ({}));
       throw new Error(err.detail || `Server error ${resp.status}`);
     }
+
+    // Decrement quantity in Cellar (delete row if qty hits 0)
+    await fetch(`${BACKEND_URL}/update-quantity`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name:            w.name,
+        vintage:         w.vintage   || '',
+        winery:          w.winery    || '',
+        quantity_change: -1,
+      })
+    }).catch(err => console.warn('update-quantity failed:', err));
 
     closeModal();
     showToast('🍷 Tasting logged!');
