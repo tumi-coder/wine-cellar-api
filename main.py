@@ -334,5 +334,6 @@ async def update_quantity(req: UpdateQuantityRequest):
         "winery": req.winery,
         "quantity_change": req.quantity_change,
     }
+    print(f"[update-quantity] payload → {payload}")
     result = await _post_to_sheets(payload)
     return {"status": "ok", "message": "Quantity updated", "sheets": result}

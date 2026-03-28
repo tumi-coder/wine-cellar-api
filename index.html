@@ -606,7 +606,8 @@ async function loadData() {
     renderCellar();
     renderTasted();
     updateBadge();
-    showToast(`✓ ${allCellar.length} bottle${allCellar.length !== 1 ? 's' : ''} in cellar`);
+    const totalBottles = allCellar.reduce((sum, w) => sum + (parseInt(w.qty) || 1), 0);
+    showToast(`✓ ${totalBottles} bottle${totalBottles !== 1 ? 's' : ''} in cellar`);
 
   } catch (e) {
     renderError(e.message);
@@ -1108,16 +1109,25 @@ async function submitTasted() {
     }
 
     // Decrement quantity in Cellar (delete row if qty hits 0)
-    await fetch(`${BACKEND_URL}/update-quantity`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name:            w.name,
-        vintage:         w.vintage   || '',
-        winery:          w.winery    || '',
-        quantity_change: -1,
-      })
-    }).catch(err => console.warn('update-quantity failed:', err));
+    try {
+      const qtyResp = await fetch(`${BACKEND_URL}/update-quantity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:            w.name,
+          vintage:         w.vintage   || '',
+          winery:          w.winery    || '',
+          quantity_change: -1,
+        })
+      });
+      if (!qtyResp.ok) {
+        const qtyErr = await qtyResp.json().catch(() => ({}));
+        console.warn('update-quantity failed:', qtyErr);
+        showToast('⚠️ Tasting logged but cellar qty not updated: ' + (qtyErr.detail || qtyResp.status));
+      }
+    } catch (qtyErr) {
+      console.warn('update-quantity network error:', qtyErr);
+    }
 
     closeModal();
     showToast('🍷 Tasting logged!');
@@ -1201,7 +1211,7 @@ function renderError(msg) {
 
 /* ─── Helpers ───────────────────────────────────────────────────────────── */
 function updateBadge() {
-  const n = allCellar.length;
+  const n = allCellar.reduce((sum, w) => sum + (parseInt(w.qty) || 1), 0);
   document.getElementById('header-badge').textContent = n + ' bottle' + (n !== 1 ? 's' : '');
 }
 
