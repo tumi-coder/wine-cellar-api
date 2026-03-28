@@ -275,12 +275,37 @@ async def _post_to_sheets(payload: dict) -> dict:
 
 @app.post("/add-wine")
 async def add_wine(req: AddWineRequest):
-    """Forward a new wine to the Cellar tab in Google Sheets."""
+    """
+    Add a wine to the Cellar sheet.
+    If a row with the same name + vintage + winery already exists,
+    increment its quantity instead of appending a new row.
+    """
     today = date.today().isoformat()
+
+    # Check whether this wine already exists
+    find_result = await _post_to_sheets({
+        "action": "find_wine",
+        "name": req.name,
+        "vintage": req.vintage,
+        "winery": req.winery,
+    })
+
+    if find_result.get("status") == "found":
+        # Wine exists — add to its quantity
+        incr_result = await _post_to_sheets({
+            "action": "increment_quantity",
+            "name": req.name,
+            "vintage": req.vintage,
+            "winery": req.winery,
+            "quantity": req.quantity,
+        })
+        return {"status": "ok", "message": "Quantity updated", "sheets": incr_result}
+
+    # Wine does not exist — append a new row
     notes_combined = "\n".join(
         filter(None, [req.notes, f"Food: {req.food}" if req.food else ""])
     )
-    payload = {
+    result = await _post_to_sheets({
         "action": "add_wine",
         "name": req.name,
         "vintage": req.vintage,
@@ -292,8 +317,7 @@ async def add_wine(req: AddWineRequest):
         "quantity": req.quantity,
         "date_added": req.date_added or today,
         "notes": notes_combined,
-    }
-    result = await _post_to_sheets(payload)
+    })
     return {"status": "ok", "message": "Wine added to cellar", "sheets": result}
 
 

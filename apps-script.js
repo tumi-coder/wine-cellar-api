@@ -6,11 +6,14 @@
  *
  * Supported actions
  * ─────────────────
- * add_wine        — append a row to the Cellar sheet
- * add_drunk       — append a row to the Drunk sheet
- * update_quantity — find wine by name+vintage in Cellar, decrement qty;
- *                   delete the row if qty reaches 0
- * delete_wine     — find wine by name+vintage in Cellar, delete the row
+ * add_wine          — append a row to the Cellar sheet
+ * add_drunk         — append a row to the Drunk sheet
+ * find_wine         — find row by name+vintage+winery; returns {status:"found",quantity:N}
+ *                     or {status:"not_found"}
+ * increment_quantity— find row by name+vintage+winery, add quantity to existing qty
+ * update_quantity   — find row by name+vintage in Cellar, decrement qty;
+ *                     delete the row if qty reaches 0
+ * delete_wine       — find row by name+vintage in Cellar, delete the row
  *
  * Cellar sheet columns (A–J):
  *   name | vintage | region | grape | winery | rating | price | qty | dateAdded | notes
@@ -67,6 +70,32 @@ function doPost(e) {
       return jsonOk('Tasting logged');
     }
 
+    if (action === 'find_wine') {
+      var sheet    = ss.getSheetByName('Cellar');
+      var rowIndex = findRowFull(sheet, data.name, data.vintage, data.winery);
+      if (rowIndex === -1) {
+        return ContentService
+          .createTextOutput(JSON.stringify({ status: 'not_found' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var qty = parseInt(sheet.getRange(rowIndex, CELLAR_COL.qty).getValue()) || 0;
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: 'found', quantity: qty }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'increment_quantity') {
+      var sheet    = ss.getSheetByName('Cellar');
+      var rowIndex = findRowFull(sheet, data.name, data.vintage, data.winery);
+      if (rowIndex === -1) {
+        return jsonError('Wine not found in Cellar');
+      }
+      var qtyCell = sheet.getRange(rowIndex, CELLAR_COL.qty);
+      var newQty  = (parseInt(qtyCell.getValue()) || 0) + (data.quantity || 1);
+      qtyCell.setValue(newQty);
+      return jsonOk('Quantity updated to ' + newQty);
+    }
+
     if (action === 'update_quantity') {
       var sheet    = ss.getSheetByName('Cellar');
       var rowIndex = findRow(sheet, data.name, data.vintage);
@@ -102,6 +131,7 @@ function doPost(e) {
 
 /**
  * Find the 1-indexed sheet row whose name and vintage match.
+ * Used by update_quantity and delete_wine.
  * Returns -1 if not found.
  */
 function findRow(sheet, name, vintage) {
@@ -111,6 +141,26 @@ function findRow(sheet, name, vintage) {
     var rowVintage = String(values[i][1]).trim();
     if (rowName === String(name || '').trim() &&
         rowVintage === String(vintage || '').trim()) {
+      return i + 1;  // convert to 1-indexed row number
+    }
+  }
+  return -1;
+}
+
+/**
+ * Find the 1-indexed sheet row whose name, vintage, AND winery all match.
+ * Used by find_wine and increment_quantity.
+ * Returns -1 if not found.
+ */
+function findRowFull(sheet, name, vintage, winery) {
+  var values = sheet.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {  // i=1 skips header row
+    var rowName    = String(values[i][0]).trim();
+    var rowVintage = String(values[i][1]).trim();
+    var rowWinery  = String(values[i][4]).trim();  // winery is column E (0-based index 4)
+    if (rowName    === String(name    || '').trim() &&
+        rowVintage === String(vintage || '').trim() &&
+        rowWinery  === String(winery  || '').trim()) {
       return i + 1;  // convert to 1-indexed row number
     }
   }
